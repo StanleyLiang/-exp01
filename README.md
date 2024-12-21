@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## init db
+
+- create database
+- create user
+
+```sql
+CREATE USER 'miniopassroot'@'localhost' IDENTIFIED BY '';
+GRANT ALL PRIVILEGES ON test.* TO 'miniopassroot'@'localhost';
+FLUSH PRIVILEGES;
+```
+
 ## Getting Started
 
 First, run the development server:
