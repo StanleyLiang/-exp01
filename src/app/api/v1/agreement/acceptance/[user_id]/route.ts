@@ -1,5 +1,11 @@
-import { getDb } from '@/lib/data/db/knex'
 import { NextRequest } from 'next/server'
+import {
+  getLatestAgreement,
+  getUserAcceptance,
+  checkAgreementIdAccepted,
+  createAcceptanceRecord,
+  updateAcceptanceRecord,
+} from './utils'
 
 const AGREEMENT_IDS_CONNECTOR = ','
 
@@ -16,12 +22,28 @@ export async function GET(
   }
 
   try {
-    const db = getDb()
-    const acceptances = await db('acceptances')
-      .where({ user_id })
-      .orderBy('version', 'desc')
-      .first()
-    return new Response(JSON.stringify({ acceptances }), { status: 200 })
+    // get the latest agreement
+    const latestAgreement = await getLatestAgreement()
+    if (!latestAgreement) {
+      return new Response(JSON.stringify({ message: 'No agreement' }), {
+        status: 404,
+      })
+    }
+    // get user acceptance
+    const acceptance = await getUserAcceptance(user_id)
+
+    if (!acceptance) {
+      return new Response(JSON.stringify({ accepted: false }), { status: 200 })
+    }
+    if (
+      checkAgreementIdAccepted(acceptance.agreement_ids, latestAgreement.id)
+    ) {
+      return new Response(JSON.stringify({ accepted: true }), {
+        status: 200,
+      })
+    }
+
+    return new Response(JSON.stringify({ accepted: false }), { status: 200 })
   } catch (error) {
     return new Response(JSON.stringify({ error }), { status: 500 })
   }
@@ -40,12 +62,9 @@ export async function POST(
   }
 
   try {
-    const db = getDb()
-    // get the latest agreement
-    const latestAcceptance = await db('agreements')
-      .orderBy('version', 'desc')
-      .first()
-    if (!latestAcceptance) {
+    const latestAgreement = await getLatestAgreement()
+
+    if (!latestAgreement) {
       return new Response(
         JSON.stringify({ message: 'No agreement to accept' }),
         {
@@ -54,15 +73,14 @@ export async function POST(
       )
     }
     // get user acceptance
-    const acceptance = await db('acceptances').where({ user_id }).first()
+    const acceptance = await getUserAcceptance(user_id)
     const now = new Date()
 
     if (!acceptance) {
-      await db('acceptances').insert({
+      await createAcceptanceRecord({
         user_id,
-        agreement_ids: [latestAcceptance.id].join(AGREEMENT_IDS_CONNECTOR),
-        created_at: now,
-        updated_at: now,
+        agreementId: latestAgreement.id,
+        now,
       })
       return new Response(JSON.stringify({ message: 'Acceptance created' }), {
         status: 201,
@@ -71,18 +89,17 @@ export async function POST(
       const agreementIds = acceptance.agreement_ids.split(
         AGREEMENT_IDS_CONNECTOR,
       )
-      if (agreementIds.includes(latestAcceptance.id.toString())) {
+      if (agreementIds.includes(latestAgreement.id.toString())) {
         return new Response(JSON.stringify({ message: 'Already accepted' }), {
           status: 200,
         })
       }
-      agreementIds.push(latestAcceptance.id.toString())
-      await db('acceptances')
-        .where({ user_id })
-        .update({
-          agreement_ids: agreementIds.join(AGREEMENT_IDS_CONNECTOR),
-          updated_at: now,
-        })
+      agreementIds.push(latestAgreement.id.toString())
+      await updateAcceptanceRecord({
+        user_id,
+        agreementIds,
+        now,
+      })
       return new Response(JSON.stringify({ message: 'Acceptance updated' }), {
         status: 200,
       })
