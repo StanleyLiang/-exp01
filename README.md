@@ -11,6 +11,18 @@ GRANT ALL PRIVILEGES ON test.* TO 'miniopassroot'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
+- run migration
+
+```
+DB_HOST=localhost DB_PORT=3306 DB_USER=<db user name> DB_PASS=<db user pass> DB_NAME=test npm run migrate:all
+```
+
+- create seed
+
+```
+DB_HOST=localhost DB_PORT=3306 DB_USER=<db user name> DB_PASS=<db user pass> DB_NAME=test npm run seed:run
+```
+
 ## Getting Started
 
 First, run the development server:

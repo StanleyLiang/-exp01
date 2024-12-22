@@ -4,6 +4,7 @@ export async function up(knex: Knex): Promise<void> {
   return knex.schema
     .createTable('agreements', function (table) {
       table.increments('id').primary()
+      table.integer('version').notNullable()
       table.timestamps()
     })
     .createTable('agreement_translations', function (table) {
@@ -23,6 +24,7 @@ export async function up(knex: Knex): Promise<void> {
     .createTable('acceptances', function (table) {
       table.increments('id').primary()
       table.integer('user_id').unsigned().notNullable()
+      table.boolean('accepted').notNullable()
       table.string('agreement_ids').nullable() // Storing multiple agreement IDs as a comma-separated string
       table.timestamps()
     })
